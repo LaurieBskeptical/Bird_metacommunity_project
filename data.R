@@ -195,11 +195,23 @@ greens_intersection<-st_intersection(g_mtl,g_obs)
 green_unique<-g_obs[!(g_obs$ID %in% greens_intersection$ID.1),]
 
 green_unique<-st_transform(green_unique,4326)
-green_areas<-rbind(green_unique,g_mtl)
+greens_combine<-rbind(green_unique,g_mtl)
 
-mapview(green_areas)
 
 #saveRDS(green_areas, file = "green_areas.rds")
+
+##merge adjacent polygons
+greens_union<-st_union(greens_combine)
+greens_cast<-st_cast(greens_union,"POLYGON")
+#mapview(plok) ##it worked
+green_areas<-st_as_sf(greens_cast)
+
+#we have to calculate area again
+green_areas$area<-st_area(green_areas)
+class(green_areas$area) #units so I must change to numeric
+
+green_areas$area<-as.numeric(green_areas$area)
+green_areas<-green_areas[green_areas$area>5000,]
 
 #=============
 #Extract bird 
@@ -214,14 +226,15 @@ st_crs(green_areas) #same projection
 #extract for nesting
 bird_nest_green <- st_intersection(comm_nest,green_areas)
 
-plouk<- 
 
 #saveRDS(bird_nest_green,file='bird_nest_green.RDS')
 
-mapview(bird_nest_green)+green_areas
+#mapview(bird_nest_green)+green_areas #it works
 
 #extract for roaming
-bird_roam_green<-st_join(comm_roam, green_areas, join = st_within)
+bird_roam_green<-st_intersection(comm_roam, green_areas)
+
+#saveRDS(bird_roam_green,file='bird_ram_green.RDS')
 
 #=================
 #tree canopy data

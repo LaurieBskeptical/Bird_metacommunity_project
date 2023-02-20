@@ -209,9 +209,25 @@ greens_intersection<-st_intersection(g_mtl,g_obs)
 green_unique<-g_obs[!(g_obs$ID %in% greens_intersection$ID.1),]
 
 green_unique<-st_transform(green_unique,4326)
-green_areas<-rbind(green_unique,g_mtl)
+greens_combine<-rbind(green_unique,g_mtl)
 ```
 Save the outcome as an RDS file.
+
+I now have to merge adjacent polygons since many polygons touch but are considered as different patches. I will do so with st_union, but it returns a MULTIPOLYGON, so I convert it to POLYGONS and then to sf_df.
+
+```{r}
+greens_union<-st_union(greens_combine)
+greens_cast<-st_cast(greens_union,"POLYGON") 
+green_areas<-st_as_sf(greens_cast)
+```
+With this procedure we lose the area of each polygon.
+```{r}
+green_areas$area<-st_area(green_areas)
+class(green_areas$area) #units so I must change to numeric
+
+green_areas$area<-as.numeric(green_areas$area)
+green_areas<-green_areas[green_areas$area>5000,]
+```
 
 
 ## Extracting birds out of green areas
@@ -226,11 +242,16 @@ It is the same projection so we don't have anything to change.
 
 Now that I have checked the projection I can proceed to the join:
 ```{r}
-bird_nest_green <- st_join(comm_nest, green_areas, join = st_within) 
+bird_nest_green <- st_intersection(comm_nest,green_areas)
 mapview(bird_nest_green)+green_areas
 
 ```
-It doesn't work since some bird count points are found out of the polygons. 
+It works! Do it for roaming.
+
+```{r}
+bird_roam_green<-st_intersection(comm_roam, green_areas)
+
+```
 
 
 ## Tree cover 
