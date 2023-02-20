@@ -1,0 +1,252 @@
+---
+title: "Projet oiseaux"
+output: html_document
+date: "2023-01-16"
+---
+```{r}
+library(sf)
+library(sp)
+library(reshape2)
+library(rgdal)
+library(mapview)
+library(dplyr)
+library(gridExtra)
+library(maptools)
+library(cleangeo)
+library(geosphere)
+library(vegan)
+library(VennDiagram)
+library(ggtern)
+```
+
+
+# Data
+
+## Bird
+
+
+```{r, setup, include=FALSE}
+knitr::opts_knit$set(root.dir = 'C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/bird')
+```
+
+
+We first need to extract data and associate spatial ID 
+```{r}
+pass <- readRDS("pass.RDS") #raw data
+
+pass[which(pass$taxa_valid_scientific_name=='Columba livia'),] ## check if there is pigeons 
+
+#construct space ID
+spID <- as.numeric(as.factor(as.character(pass$geom$geometry)))
+pass$spID <- spID #add new column of constructed id to pass data frame 
+
+# coordinates and spID
+coordSpIDAll <- st_sf(data.frame(geom = pass$geom, spID = pass$spID)) 
+coordSpIDSel <- coordSpIDAll[!duplicated(coordSpIDAll$spID),]
+coordSpID <- coordSpIDSel[order(coordSpIDSel$spID),]
+```
+
+We then have to select the nesting and roaming period which is from April to mid-June for the first one and from mid-July to September for the last one. 
+```{r}
+# Select nesting
+passApril <- pass[which(pass$month_obs == 4),]
+passMay <- pass[which(pass$month_obs == 5),]
+passJune <- pass[which(pass$month_obs == 6 & pass$day_obs <= 15),]
+
+passNest <- rbind(passApril, passMay, passJune)
+
+# Select roaming
+passJuly <- pass[which(pass$month_obs == 7 & pass$day_obs > 15),]
+passAug <- pass[which(pass$month_obs == 8),]
+passSept <- pass[which(pass$month_obs == 9),]
+
+passRoam <- rbind(passJuly, passAug, passSept)
+```
+
+We now can build the community matrix for nesting season:
+```{r}
+
+commNestRaw <- dcast(passNest, spID ~ taxa_valid_scientific_name,
+                     value.var = "value", fun.aggregate = sum)
+
+# Convert counts to 0 - 1
+commNestPA <- ifelse(commNestRaw[,-1] > 0, 1, 0)
+
+# transform into sf object
+coordNest <- coordSpID$geom[which(coordSpID$spID %in% commNestRaw$spID)]
+commNest <- st_sf(data.frame(geom = coordNest, commNestPA)) 
+
+# Check
+apply(st_drop_geometry(commNest),2,unique) # Good
+```
+
+And for the roaming season:
+```{r}
+commRoamRaw <- dcast(passRoam, spID ~ taxa_valid_scientific_name,
+                     value.var = "value", fun.aggregate = sum)
+
+# Convert counts to 0 - 1
+commRoamPA <- ifelse(commRoamRaw[,-1] > 0, 1, 0)
+
+# transform into sf object
+coordRoam <- coordSpID$geom[which(coordSpID$spID %in% commRoamRaw$spID)]
+commRoam <- st_sf(data.frame(geom = coordRoam, commRoamPA)) 
+
+# Check
+apply(st_drop_geometry(commRoam),2,unique) # Good
+```
+
+It was decided that we would keep bird data that were observed more than 4 times, and that match between the two periods (roaming and nesting). 
+```{r}
+#match
+commNestSp <- commNest[,which(colnames(commNest) %in% colnames(commRoam))]
+commRoamSp <- commRoam[,which(colnames(commRoam) %in% colnames(commNest))]
+
+#more than 4 observations
+observations<-function(df){
+  if(is.numeric(df)){
+    sum(df)>4
+  } else {
+    TRUE
+  }
+}
+
+comm_nest<- commNestSp[, sapply(commNestSp,  observations)]
+comm_roam<- commRoamSp[, sapply(commRoamSp,  observations)]
+```
+
+
+We must extract birds present in green areas. We will clean green area data and do it after it's done. 
+
+## Green areas
+
+Data of green areas was obtained through Observatoire Grand Montreal (https://observatoire.cmm.qc.ca/produits/donnees-georeferencees/#utilisation_du_sol ) (2020). It is firstly soil occupancy data with a category of classification of "park" or "green area". 
+
+Load the data: 
+```{r}
+g1<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66007-US-2020')
+g2<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66023-US-2020')
+g3<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66032-US-2020')
+g4<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66047-US-2020')
+g5<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66058-US-2020')
+g6<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66062-US-2020')
+g7<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66072-US-2020')
+g8<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66087-US-2020')
+g9<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66092-US-2020')
+g10<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66097-US-2020')
+g11<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66102-US-2020')
+g12<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66107-US-2020')
+g13<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66112-US-2020')
+g14<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66117-US-2020')
+g15<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66127-US-2020')
+g16<-st_read('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces/raw/66142-US-2020')
+
+```
+
+
+The object g2 that doesn't have the same names as the other objects. We must renames all the columns and match it with the other dataframes. 
+
+```{r}
+colnames(g2)<-c('CODEGEOG','ZONE_CPTAQ','ETAGE_MIN','ETAGE_MAX','ETAGE_MOYE','ETAGE_MEDI',
+                'ETAGE_TOTA','AIRE_MIN', 'AIRE_MAX','AIRE_MOYEN','AIRE_MEDIA','AIRE_TOTAL',
+                'LOG_MIN','LOG_MAX','LOG_MOYEN','LOG_MEDIAN','LOG_TOTAL','ANNEE_MIN',
+                'ANNEE_MAX','ANNEE_MOYE','ANNEE_MEDI','ANNEE_TOTA','TERRAIN_MI', 'TERRAIN_MA',
+                'TERRAIN_MO','TERRAIN_ME','TERRAIN_TO','TERRM2_MIN','TERRM2_MAX','TERRM2_MOY','TERRM2_MED',
+                'BAT_MIN','BAT_MAX','BAT_MOYEN','BAT_MEDIAN','BAT_TOTAL','ID','UTIL_SOL','geometry')
+
+col_order<-match(colnames(g1),colnames(g2))
+g2<-g2[,col_order]
+```
+Bind all data frames together to have only one for the whole island of Montreal.
+```{r}
+green_all<-rbind(g1,g2,g3,g4,g5,g6,g7,g8,g9,g10,g11,g12,g13,g14,g15,g16)
+```
+
+We must now extract the data for parks and greens areas (which represents in the data set the code 600 in UTIL_SOL) and golfs (1100) and keep only areas greater than 0,5 ha which is 5 000 m2. 
+
+```{r}
+g_greens<-green_all[green_all$UTIL_SOL==600,] 
+g_golf<-green_all[green_all$UTIL_SOL==1100,]
+
+greens<-rbind(g_greens,g_golf)
+
+greens$area<-st_area(greens) 
+class(greens$area)
+```
+The function st_area creates units so I must drop them in order to keep areas greater than 5 000 m2.
+```{r}
+greens$area<-as.numeric(greens$area)
+green_spaces<-greens[greens$area>5000,]
+```
+Many green areas are not present so check with data from Données ouvertes Montréal coming from: https://donnees.montreal.ca/ville-de-montreal/grands-parcs-parcs-d-arrondissements-et-espaces-publics. We will now proceed to the same steps as with the data from observatoire Montreal.
+
+```{r}
+#open data from donn/es ouvertes montreal
+setwd('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces')
+green_mtl<-readRDS(file='greens')
+
+#calculate areas of polygons because its not right
+green_mtl$area<-st_area(green_mtl)
+class(green_mtl$area) #units so I must change to numeric
+
+green_mtl$area<-as.numeric(green_mtl$area)
+green_mtl_good<-green_mtl[green_mtl$area>5000,]
+```
+We now have to extract polygons that are not present in the data from Donnees ouvertes Montreal. We first have to keep only matching columns and rename them to have the same name.
+```{r}
+g_obs<-green_spaces[,c(1,39,40)]
+
+g_mtl<-green_mtl_good[,c(1,12,13)]
+names(g_mtl)[names(g_mtl)=='OBJECTID']<-'ID' #change the name so it matches the other df
+
+```
+Before doing the intersection, both dataframes must have the same projection. The intersection will tell us which polygons are the same in bith dataframes. We will then take the data from this procedure and remove it from the data of Observatoire Montreal. We will bind these two unique dataframes to obtain the map of all the green areas of Montreal. 
+```{r}
+g_mtl<-st_transform(g_mtl,4326)
+g_obs<-st_transform(g_obs,4326)
+
+greens_intersection<-st_intersection(g_mtl,g_obs)
+green_unique<-g_obs[!(g_obs$ID %in% greens_intersection$ID.1),]
+
+green_unique<-st_transform(green_unique,4326)
+green_areas<-rbind(green_unique,g_mtl)
+```
+Save the outcome as an RDS file.
+
+
+## Extracting birds out of green areas
+
+We must first check if bird data and green areas have the same projection
+```{r}
+st_crs(comm_nest)
+st_crs(comm_roam)
+st_crs(green_areas)
+```
+It is the same projection so we don't have anything to change.
+
+Now that I have checked the projection I can proceed to the join:
+```{r}
+bird_nest_green <- st_join(comm_nest, green_areas, join = st_within) 
+mapview(bird_nest_green)+green_areas
+
+```
+It doesn't work since some bird count points are found out of the polygons. 
+
+
+## Tree cover 
+
+Data of tree cover was obtained through https://observatoire.cmm.qc.ca/produits/donnees-georeferencees/#indice_canopee (2021) where tree cover is separated in high canopy (>3m) and low canopy cover (<3m). 
+
+```{r}
+
+tree_cover<-'C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/tree cover/660_IndiceCanopee_2021.tif'
+
+tree_raster=raster(tree_cover)
+
+#mapview(tree_raster) ##check 
+```
+
+
+
+
+
