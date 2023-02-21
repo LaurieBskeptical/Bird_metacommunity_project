@@ -162,7 +162,7 @@ Bind all data frames together to have only one for the whole island of Montreal.
 green_all<-rbind(g1,g2,g3,g4,g5,g6,g7,g8,g9,g10,g11,g12,g13,g14,g15,g16)
 ```
 
-We must now extract the data for parks and greens areas (which represents in the data set the code 600 in UTIL_SOL) and golfs (1100) and keep only areas greater than 0,5 ha which is 5 000 m2. 
+We must now extract the data for parks and greens areas (which represents in the data set the code 600 in UTIL_SOL) and golfs (1100).
 
 ```{r}
 g_greens<-green_all[green_all$UTIL_SOL==600,] 
@@ -170,13 +170,6 @@ g_golf<-green_all[green_all$UTIL_SOL==1100,]
 
 greens<-rbind(g_greens,g_golf)
 
-greens$area<-st_area(greens) 
-class(greens$area)
-```
-The function st_area creates units so I must drop them in order to keep areas greater than 5 000 m2.
-```{r}
-greens$area<-as.numeric(greens$area)
-green_spaces<-greens[greens$area>5000,]
 ```
 Many green areas are not present so check with data from Données ouvertes Montréal coming from: https://donnees.montreal.ca/ville-de-montreal/grands-parcs-parcs-d-arrondissements-et-espaces-publics. We will now proceed to the same steps as with the data from observatoire Montreal.
 
@@ -184,21 +177,12 @@ Many green areas are not present so check with data from Données ouvertes Montr
 #open data from donn/es ouvertes montreal
 setwd('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces')
 green_mtl<-readRDS(file='greens')
-
-#calculate areas of polygons because its not right
-green_mtl$area<-st_area(green_mtl)
-class(green_mtl$area) #units so I must change to numeric
-
-green_mtl$area<-as.numeric(green_mtl$area)
-green_mtl_good<-green_mtl[green_mtl$area>5000,]
 ```
 We now have to extract polygons that are not present in the data from Donnees ouvertes Montreal. We first have to keep only matching columns and rename them to have the same name.
 ```{r}
-g_obs<-green_spaces[,c(1,39,40)]
-
-g_mtl<-green_mtl_good[,c(1,12,13)]
-names(g_mtl)[names(g_mtl)=='OBJECTID']<-'ID' #change the name so it matches the other df
-
+g_obs<-greens[,c(1,39)]
+g_mtl<-green_mtl[,c(1,12)]
+names(g_mtl)[names(g_mtl)=='OBJECTID']<-'ID' 
 ```
 Before doing the intersection, both dataframes must have the same projection. The intersection will tell us which polygons are the same in bith dataframes. We will then take the data from this procedure and remove it from the data of Observatoire Montreal. We will bind these two unique dataframes to obtain the map of all the green areas of Montreal. 
 ```{r}
@@ -206,7 +190,7 @@ g_mtl<-st_transform(g_mtl,4326)
 g_obs<-st_transform(g_obs,4326)
 
 greens_intersection<-st_intersection(g_mtl,g_obs)
-green_unique<-g_obs[!(g_obs$ID %in% greens_intersection$ID.1),]
+green_unique<-g_obs[!(g_obs$ID %in% greens_intersection$ID.1),] # keep only one o the two IDs
 
 green_unique<-st_transform(green_unique,4326)
 greens_combine<-rbind(green_unique,g_mtl)
@@ -220,15 +204,18 @@ greens_union<-st_union(greens_combine)
 greens_cast<-st_cast(greens_union,"POLYGON") 
 green_areas<-st_as_sf(greens_cast)
 ```
-With this procedure we lose the area of each polygon.
+
+I must now calculate the area of the merged polygons.
 ```{r}
 green_areas$area<-st_area(green_areas)
 class(green_areas$area) #units so I must change to numeric
+```
+The function st_area creates units so I must drop them in order to keep areas greater than 5 000 m2.
 
+```{r}
 green_areas$area<-as.numeric(green_areas$area)
 green_areas<-green_areas[green_areas$area>5000,]
 ```
-
 
 ## Extracting birds out of green areas
 
@@ -246,13 +233,13 @@ bird_nest_green <- st_intersection(comm_nest,green_areas)
 mapview(bird_nest_green)+green_areas
 
 ```
-It works! Do it for roaming.
+It works! Do it for roaming. 
 
 ```{r}
 bird_roam_green<-st_intersection(comm_roam, green_areas)
 
 ```
-
+We see that some areas don't have bird observations. It was decided that we would keep them for the spatial analysis, because no observations does not mean that no birds were present and could be used to "rest" when flying. 
 
 ## Tree cover 
 

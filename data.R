@@ -163,42 +163,25 @@ g_golf<-green_all[green_all$UTIL_SOL==1100,]
 
 greens<-rbind(g_greens,g_golf)
 
-#calculate areas of polygons because its not right
-greens$area<-st_area(greens)
-class(greens$area) #units so I must change to numeric
-
-greens$area<-as.numeric(greens$area)
-green_spaces<-greens[greens$area>5000,]
-mapview(green_spaces)
 
 #open data from donn/es ouvertes montreal
 setwd('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/green spaces')
 green_mtl<-readRDS(file='greens')
 
-#calculate areas of polygons because its not right
-green_mtl$area<-st_area(green_mtl)
-class(green_mtl$area) #units so I must change to numeric
-
-green_mtl$area<-as.numeric(green_mtl$area)
-green_mtl_good<-green_mtl[green_mtl$area>5000,]
 
 #extract polygons that are not 
-g_obs<-green_spaces[,c(1,39,40)]
-
-g_mtl<-green_mtl_good[,c(1,12,13)]
+g_obs<-greens[,c(1,39)]
+g_mtl<-green_mtl[,c(1,12)]
 names(g_mtl)[names(g_mtl)=='OBJECTID']<-'ID' #change the name so it matches the other df
 
 g_mtl<-st_transform(g_mtl,4326)
 g_obs<-st_transform(g_obs,4326)
 
 greens_intersection<-st_intersection(g_mtl,g_obs)
-green_unique<-g_obs[!(g_obs$ID %in% greens_intersection$ID.1),]
+green_unique<-g_obs[!(g_obs$ID %in% greens_intersection$ID.1),] #garder seulement un des deux ID
 
 green_unique<-st_transform(green_unique,4326)
 greens_combine<-rbind(green_unique,g_mtl)
-
-
-#saveRDS(green_areas, file = "green_areas.rds")
 
 ##merge adjacent polygons
 greens_union<-st_union(greens_combine)
@@ -213,6 +196,8 @@ class(green_areas$area) #units so I must change to numeric
 green_areas$area<-as.numeric(green_areas$area)
 green_areas<-green_areas[green_areas$area>5000,]
 
+#saveRDS(green_areas, file = "green_areas.rds")
+
 #=============
 #Extract bird 
 #=============
@@ -226,9 +211,7 @@ st_crs(green_areas) #same projection
 #extract for nesting
 bird_nest_green <- st_intersection(comm_nest,green_areas)
 
-
 #saveRDS(bird_nest_green,file='bird_nest_green.RDS')
-
 #mapview(bird_nest_green)+green_areas #it works
 
 #extract for roaming
