@@ -214,13 +214,17 @@ tree_cover<-rast('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantit
 
 #tree cover lower than 3m 
 low_tree_cover<-tree_cover
-low_tree_masked<-mask(low_tree_cover,low_tree_cover!=3) #turn every value that is not 3 into NA
-plot(low_tree_masked,col='yellow',colNA='white')
+low_tree_masked<-ifel(low_tree_cover!=3,NA,low_tree_cover) #turn every value that is not 3 into NA
+plot(low_tree_masked,col='yellow')
 
 #tree cover higher than 3 m 
 high_tree_cover<-tree_cover
-high_tree_masked<-mask(high_tree_cover,high_tree_cover!=4) #turn every value that is not 4 into NA
-plot(high_tree_masked,col='green',colNA='white') 
+high_tree_masked<-ifel(high_tree_cover!=4,NA,high_tree_cover)#turn every value that is not 4 into NA
+plot(high_tree_masked,col='green') 
 
-#transformer toutes les valeurs qui ne sont pas 4 en polygone
-#st_as_sf transforme un raster en polygone 
+#transform pixels to polygons
+##low canopy
+low_cover<-rasterToPolygons(low_tree_masked,dissolve = TRUE)
+
+##high canopy
+high_cover<-rasterToPolygons(high_tree_masked,dissolve = TRUE)
