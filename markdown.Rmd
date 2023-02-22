@@ -96,23 +96,10 @@ commRoam <- st_sf(data.frame(geom = coordRoam, commRoamPA))
 apply(st_drop_geometry(commRoam),2,unique) # Good
 ```
 
-It was decided that we would keep bird data that were observed more than 4 times, and that match between the two periods (roaming and nesting). 
+Keep bird data that match between the two periods (roaming and nesting). 
 ```{r}
-#match
-commNestSp <- commNest[,which(colnames(commNest) %in% colnames(commRoam))]
-commRoamSp <- commRoam[,which(colnames(commRoam) %in% colnames(commNest))]
-
-#more than 4 observations
-observations<-function(df){
-  if(is.numeric(df)){
-    sum(df)>4
-  } else {
-    TRUE
-  }
-}
-
-comm_nest<- commNestSp[, sapply(commNestSp,  observations)]
-comm_roam<- commRoamSp[, sapply(commRoamSp,  observations)]
+comm_nest <- commNest[,which(colnames(commNest) %in% colnames(commRoam))]
+comm_roam <- commRoam[,which(colnames(commRoam) %in% colnames(commNest))]
 ```
 
 

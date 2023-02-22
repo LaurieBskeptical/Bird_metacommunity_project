@@ -98,21 +98,8 @@ commRoamData <- st_drop_geometry(commRoam) #use for the analysis
 #=========================
 
 #match observations for each period 
-commNestSp <- commNest[,which(colnames(commNest) %in% colnames(commRoam))]
-commRoamSp <- commRoam[,which(colnames(commRoam) %in% colnames(commNest))]
-
-#keep only bird counts with more than 4 observations  
-observations<-function(df){
-  if(is.numeric(df)){
-    sum(df)>4
-  } else {
-    TRUE
-  }
-}
-
-comm_nest<- commNestSp[, sapply(commNestSp,  observations)]
-comm_roam<- commRoamSp[, sapply(commRoamSp,  observations)]
-
+comm_nest <- commNest[,which(colnames(commNest) %in% colnames(commRoam))]
+comm_roam <- commRoam[,which(colnames(commRoam) %in% colnames(commNest))]
 
 #=======================
 #extract of green areas
@@ -217,15 +204,17 @@ bird_nest_green <- st_intersection(comm_nest,green_areas)
 #extract for roaming
 bird_roam_green<-st_intersection(comm_roam, green_areas)
 
-#saveRDS(bird_roam_green,file='bird_ram_green.RDS')
+#saveRDS(bird_roam_green,file='bird_roam_green.RDS')
 
 #=================
 #tree canopy data
 #=================
 
-tree_cover<-'C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/tree cover/660_IndiceCanopee_2021.tif'
+tree_cover<-rast('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/tree cover/660_IndiceCanopee_2021.tif')
 tree_rast<-rast(tree_cover) #with terra package
 tree_raster=raster(tree_cover)
+
+tree_cover[tree_cover==1]<-NA
 
 mapview(tree_raster)
 
