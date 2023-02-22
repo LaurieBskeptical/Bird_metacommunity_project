@@ -211,12 +211,16 @@ bird_roam_green<-st_intersection(comm_roam, green_areas)
 #=================
 
 tree_cover<-rast('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/tree cover/660_IndiceCanopee_2021.tif')
-tree_rast<-rast(tree_cover) #with terra package
-tree_raster=raster(tree_cover)
 
-tree_cover[tree_cover==1]<-NA
+#tree cover lower than 3m 
+low_tree_cover<-tree_cover
+low_tree_masked<-mask(low_tree_cover,low_tree_cover!=3) #turn every value that is not 3 into NA
+plot(low_tree_masked,col='yellow',colNA='white')
 
-mapview(tree_raster)
+#tree cover higher than 3 m 
+high_tree_cover<-tree_cover
+high_tree_masked<-mask(high_tree_cover,high_tree_cover!=4) #turn every value that is not 4 into NA
+plot(high_tree_masked,col='green',colNA='white') 
 
 #transformer toutes les valeurs qui ne sont pas 4 en polygone
 #st_as_sf transforme un raster en polygone 

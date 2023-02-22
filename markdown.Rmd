@@ -234,12 +234,30 @@ Data of tree cover was obtained through https://observatoire.cmm.qc.ca/produits/
 
 ```{r}
 
-tree_cover<-'C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/tree cover/660_IndiceCanopee_2021.tif'
+tree_cover<-rast('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/tree cover/660_IndiceCanopee_2021.tif')
 
-tree_raster=raster(tree_cover)
-
-#mapview(tree_raster) ##check 
 ```
+
+We must separate data from low and high canopy. To do so we must turn every value that is not the desired value (3 for low canopy and 4 for high canopy) to NAs to keep the spatial structure. 
+
+Low canopy cover:
+```{r}
+low_tree_cover<-tree_cover
+low_tree_masked<-mask(low_tree_cover,low_tree_cover!=3)
+plot(low_tree_masked,col='yellow',colNA='white') #check to see if it works
+```
+The low canopy cover works when we plot it.
+
+High canopy cover:
+```{r}
+high_tree_cover<-tree_cover
+high_tree_masked<-mask(high_tree_cover,high_tree_cover!=4) 
+plot(high_tree_masked,col='green',colNA='white') 
+```
+When I plot it it does not work. 
+
+
+
 
 
 
