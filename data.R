@@ -222,9 +222,29 @@ high_tree_cover<-tree_cover
 high_tree_masked<-ifel(high_tree_cover!=4,NA,high_tree_cover)#turn every value that is not 4 into NA
 plot(high_tree_masked,col='green') 
 
-#transform pixels to polygons
-##low canopy
-low_cover<-rasterToPolygons(low_tree_masked,dissolve = TRUE)
+#match raster extent to polygon raster
+r_extent<-ext(tree_cover)
 
-##high canopy
-high_cover<-rasterToPolygons(high_tree_masked,dissolve = TRUE)
+green_areas_crs<-st_transform(green_areas,crs(tree_cover)) #transform polygon to match projection of raster
+
+green_bbox<-st_bbox(green_areas_crs) #get coordinates of the bounding box of green areas
+
+green_bbox_sfc<-st_as_sfc(green_bbox) #transform bbox object as sfc
+
+bbox_crs<-st_transform(green_bbox_sfc,crs(tree_cover)) #make it the same crs as raster layer
+
+green_res<-bbox_crs/dim(tree_cover) #get resolution of polygon in the same unit as raster
+
+ext(tree_cover)<-bbox_crs
+
+
+low_cover=data.frame() #create empty dataframe 
+
+for(i in 1:nrow(green_areas)){
+  poly<-green_areas[i,] #subset for each green area
+  crp<-crop(low_tree_masked,poly)
+  msk<-mask(crp,poly)#mask values outside polygons
+  tbl<-data.frame(freq(msk)) #count number of pixels in each polygon
+  tbl<-tbl[!is.na(tbl$value),]
+  low_cover<-rbind(low_cover,tbl)
+}
