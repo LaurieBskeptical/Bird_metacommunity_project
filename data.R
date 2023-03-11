@@ -248,3 +248,25 @@ for(i in 1:nrow(green_areas)){
   tbl<-tbl[!is.na(tbl$value),]
   low_cover<-rbind(low_cover,tbl)
 }
+
+
+vect(green_areas_crs) #transform into SpatVect
+green_raster<-rast(green_areas_crs) 
+
+vals<-rep(1,times=nrow(green_areas_crs))
+
+green_raster_plok<-setValues(green_raster,vals)
+
+
+
+
+
+plok<-as.polygons(low_tree_masked)
+
+
+
+
+
+
+
+
