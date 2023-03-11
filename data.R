@@ -261,12 +261,20 @@ green_raster_plok<-setValues(green_raster,vals)
 
 
 
-plok<-as.polygons(low_tree_masked)
+low_tree_poly<-as.polygons(low_tree_masked)
+
+
+extent_green<-ext(tree_cover) #retrieve extent 
+ext(low_tree_masked)<-as.vector(green_extent) #
 
 
 
 
 
 
-
-
+tree_cover<-rast('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/tree cover/660_IndiceCanopee_2021.tif')
+#tree cover lower than 3m 
+low_tree_cover<-tree_cover
+low_tree_masked<-ifel(low_tree_cover!=3,NA,low_tree_cover)
+extent_green<-ext(tree_cover)
+ext(low_tree_masked)<-extent_green
