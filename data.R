@@ -212,69 +212,22 @@ bird_roam_green<-st_intersection(comm_roam, green_areas)
 
 tree_cover<-rast('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/tree cover/660_IndiceCanopee_2021.tif')
 
-#tree cover lower than 3m 
-low_tree_cover<-tree_cover
-low_tree_masked<-ifel(low_tree_cover!=3,NA,low_tree_cover) #turn every value that is not 3 into NA
-plot(low_tree_masked,col='yellow')
+#transform polygon to match projection of raster
+green_areas_crs<-st_transform(green_areas,crs(tree_cover)) 
 
-#tree cover higher than 3 m 
-high_tree_cover<-tree_cover
-high_tree_masked<-ifel(high_tree_cover!=4,NA,high_tree_cover)#turn every value that is not 4 into NA
-plot(high_tree_masked,col='green') 
+#transform polygons into SpatVector
+green_vect<-vect(green_areas_crs)
+green_extract <-extract(tree_cover, green_vect) #extract values of raster inside polygons
 
-#match raster extent to polygon raster
-r_extent<-ext(tree_cover)
+#check what it looks like
+plot(tree_cover)
+lines(green_vect)
 
-green_areas_crs<-st_transform(green_areas,crs(tree_cover)) #transform polygon to match projection of raster
+#get summary of each polygon
+green_fac <- as.factor(green_extract [,1]) #fist column is polygons
+tree_fac <- as.factor(green_extract [,2]) #second column is raster
+pixels_greens<-tapply(tree_fac, green_fac, summary)
 
-green_bbox<-st_bbox(green_areas_crs) #get coordinates of the bounding box of green areas
-
-green_bbox_sfc<-st_as_sfc(green_bbox) #transform bbox object as sfc
-
-bbox_crs<-st_transform(green_bbox_sfc,crs(tree_cover)) #make it the same crs as raster layer
-
-green_res<-bbox_crs/dim(tree_cover) #get resolution of polygon in the same unit as raster
-
-ext(tree_cover)<-bbox_crs
+pixels_greens[[1]][[3]]
 
 
-low_cover=data.frame() #create empty dataframe 
-
-for(i in 1:nrow(green_areas)){
-  poly<-green_areas[i,] #subset for each green area
-  crp<-crop(low_tree_masked,poly)
-  msk<-mask(crp,poly)#mask values outside polygons
-  tbl<-data.frame(freq(msk)) #count number of pixels in each polygon
-  tbl<-tbl[!is.na(tbl$value),]
-  low_cover<-rbind(low_cover,tbl)
-}
-
-
-vect(green_areas_crs) #transform into SpatVect
-green_raster<-rast(green_areas_crs) 
-
-vals<-rep(1,times=nrow(green_areas_crs))
-
-green_raster_plok<-setValues(green_raster,vals)
-
-
-
-
-
-low_tree_poly<-as.polygons(low_tree_masked)
-
-
-extent_green<-ext(tree_cover) #retrieve extent 
-ext(low_tree_masked)<-as.vector(green_extent) #
-
-
-
-
-
-
-tree_cover<-rast('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantitative des données BIO6077/Projet final/data/Environmental variables/tree cover/660_IndiceCanopee_2021.tif')
-#tree cover lower than 3m 
-low_tree_cover<-tree_cover
-low_tree_masked<-ifel(low_tree_cover!=3,NA,low_tree_cover)
-extent_green<-ext(tree_cover)
-ext(low_tree_masked)<-extent_green

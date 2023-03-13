@@ -256,6 +256,12 @@ plot(high_tree_masked,col='green')
 ```
 It works!
 
+It seems easier to convert green area polygons into a raster and then cut the canopy with this rasterized layer of green areas.
+
+```{r}
+
+```
+
 
 
 
