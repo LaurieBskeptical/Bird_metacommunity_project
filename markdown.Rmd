@@ -240,32 +240,34 @@ tree_cover<-rast('C:/Users/greco/OneDrive - USherbrooke/Maitrise/Analyse Quantit
 
 ```
 
-We must separate data from low and high canopy. To do so we must turn every value that is not the desired value (3 for low canopy and 4 for high canopy) to NAs to keep the spatial structure. 
-
-Low canopy cover:
+Then we need to extract the values of pixels inside each green areas polygons. So we first have to give the same projection as the raster to the green areas and convert it to a vector.
 ```{r}
-low_tree_masked<-ifel(low_tree_cover!=3,NA,low_tree_cover) #turn every value that is not 3 into NA
-plot(low_tree_masked,col='yellow') #check to see if it works
+green_vect<-vect(green_areas_crs)
+green_extract <-extract(tree_cover, green_vect)
 ```
 
-High canopy cover:
-```{r}
-high_tree_cover<-tree_cover
-high_tree_masked<-ifel(high_tree_cover!=4,NA,high_tree_cover)#turn every value that is not 4 into NA
-plot(high_tree_masked,col='green') 
-```
-It works!
-
-It seems easier to convert green area polygons into a raster and then cut the canopy with this rasterized layer of green areas.
+We can plot it to see what it looks like and if it worked.
 
 ```{r}
-
+plot(tree_cover)
+lines(green_vect)
+```
+Get summary of each polygon.
+```{r}
+green_fac <- as.factor(green_extract [,1]) #fist column is polygons
+tree_fac <- as.factor(green_extract [,2]) #second column is raster
+pixels_greens<-tapply(tree_fac, green_fac, summary) #gives an array
 ```
 
-
-
-
-
-
+Now we can put the values 3 and 4 which represents low and high canopy cover respectively in a data frame
+```{r}
+canopy<-data.frame()
+for (i in 1:nrow(pixels_greens)) {
+  canopy[i,1]<-pixels_greens[[i]][[3]] #choose value 3 for each row
+  canopy[i,2]<-pixels_greens[[i]][[4]]
+  colnames(canopy)<-c('low_cover','high_cover') #change column names
+  print(canopy) #works
+}
+```
 
 

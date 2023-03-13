@@ -228,6 +228,11 @@ green_fac <- as.factor(green_extract [,1]) #fist column is polygons
 tree_fac <- as.factor(green_extract [,2]) #second column is raster
 pixels_greens<-tapply(tree_fac, green_fac, summary)
 
-pixels_greens[[1]][[3]]
-
-
+#get into a dataframe values of 3 and 4 
+canopy<-data.frame()
+for (i in 1:nrow(pixels_greens)) {
+  canopy[i,1]<-pixels_greens[[i]][[3]]
+  canopy[i,2]<-pixels_greens[[i]][[4]]
+  colnames(canopy)<-c('low_cover','high_cover')
+  print(canopy)
+}
