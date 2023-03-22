@@ -259,15 +259,40 @@ tree_fac <- as.factor(green_extract [,2]) #second column is raster
 pixels_greens<-tapply(tree_fac, green_fac, summary) #gives an array
 ```
 
-Now we can put the values 3 and 4 which represents low and high canopy cover respectively in a data frame
+Now we can put the proportion of the values 3 and 4 which represents low and high canopy cover respectively in a data frame.
 ```{r}
 canopy<-data.frame()
 for (i in 1:nrow(pixels_greens)) {
-  canopy[i,1]<-pixels_greens[[i]][[3]] #choose value 3 for each row
-  canopy[i,2]<-pixels_greens[[i]][[4]]
-  colnames(canopy)<-c('low_cover','high_cover') #change column names
-  print(canopy) #works
+  canopy[i,1]<-pixels_greens[[i]][[3]]/(pixels_greens[[i]][[1]]+pixels_greens[[i]][[2]]+pixels_greens[[i]][[3]]+pixels_greens[[i]][[4]]+pixels_greens[[i]][[5]])
+  canopy[i,2]<-pixels_greens[[i]][[4]]/(pixels_greens[[i]][[1]]+pixels_greens[[i]][[2]]+pixels_greens[[i]][[3]]+pixels_greens[[i]][[4]]+pixels_greens[[i]][[5]])
+  colnames(canopy)<-c('low_cover','high_cover')
+  print(canopy)
 }
 ```
+
+## Building density 
+For the building density we will use the same data as the tree cover since the value '2' represents construction and the value '1' represents roads and parkings. We will not include roads and parkings in this analysis since unlike buildings, they do not have a 3d dimension in the sense that it does not block dispersal. Also it is said in the methodology of Observatoire Montreal (https://observatoire.cmm.qc.ca/documents/geomatique/IndiceCanopee/2015/CMM_indiceCanopee_2015_methodologie.pdf) that the highest cover is taken into account as it is airborne photography. 
+
+We will measure building density 200 m around the green areas. So we will first create a 200 m buffer around green areas. 
+
+```{r}
+greens_buffer<-st_buffer(green_areas,dist=200) 
+
+green_buffer_crs<-st_transform(greens_buffer,crs(tree_cover)) 
+```
+Transform buffer into SpatVector 
+
+```{r}
+buffer_vect<-vect(green_buffer_crs)
+buffer_extract <-extract(tree_cover, buffer_vect)
+```
+Because there are polygons that are very close to one another, when the buffer is created there is a lot of overlapping between buffers. 
+This will probably cause a lot of problem with the st_difference 
+
+
+
+
+
+
 
 

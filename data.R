@@ -231,8 +231,33 @@ pixels_greens<-tapply(tree_fac, green_fac, summary)
 #get into a dataframe values of 3 and 4 
 canopy<-data.frame()
 for (i in 1:nrow(pixels_greens)) {
-  canopy[i,1]<-pixels_greens[[i]][[3]]
-  canopy[i,2]<-pixels_greens[[i]][[4]]
+  canopy[i,1]<-pixels_greens[[i]][[3]]/(pixels_greens[[i]][[1]]+pixels_greens[[i]][[2]]+pixels_greens[[i]][[3]]+pixels_greens[[i]][[4]]+pixels_greens[[i]][[5]])
+  canopy[i,2]<-pixels_greens[[i]][[4]]/(pixels_greens[[i]][[1]]+pixels_greens[[i]][[2]]+pixels_greens[[i]][[3]]+pixels_greens[[i]][[4]]+pixels_greens[[i]][[5]])
   colnames(canopy)<-c('low_cover','high_cover')
   print(canopy)
 }
+
+#=================
+#building density
+#=================
+
+#buffer around green areas of 200 meters
+greens_buffer<-st_buffer(green_areas,dist=200) #it works 
+
+green_buffer_crs<-st_transform(greens_buffer,crs(tree_cover)) 
+
+#which overlap
+buff_over<-st_overlaps(green_buffer_crs,green_areas_crs)
+
+#transform buffer polygons into SpatVector
+buffer_vect<-vect(green_buffer_crs)
+buffer_extract <-extract(tree_cover, buffer_vect) #extract values of raster inside polygons
+
+plot(tree_cover)
+lines(buffer_vect)
+
+
+#buff_diff<-st_difference(greens_buffer,green_areas)
+#saveRDS(buff_diff, file = "buffer.rds")
+
+buffer_greens <- readRDS("buffer.RDS")
